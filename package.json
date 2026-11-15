@@ -10,10 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.2.0",
     "cors": "^2.8.6",
     "dompurify": "^3.4.17",
     "dotenv": "^17.2.3",
     "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
+    "express-session": "^1.19.0",
     "marked": "^17.0.6",
     "openai": "^6.15.0"
   },

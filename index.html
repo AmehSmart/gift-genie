@@ -3,53 +3,240 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gift Genie 🧞</title>
+    <meta
+      name="description"
+      content="Get thoughtful, personal gift ideas with Gift Genie."
+    />
+    <title>Gift Genie</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="app-container">
-      <header class="app-header">
-        <div class="title-group">
-          <img src="assets/genie.svg" alt="Genie" class="genie-icon-img" />
-          <h1>Gift Genie</h1>
+    <main id="auth-view" class="auth-screen">
+      <section class="auth-card" aria-labelledby="auth-title">
+        <div class="auth-brand">
+          <img src="assets/genie.svg" alt="" class="genie-icon-img" />
+          <span>Gift Genie</span>
         </div>
-      </header>
+        <p class="eyebrow">Thoughtful gifting, made easier</p>
+        <h1 id="auth-title">Welcome back</h1>
+        <p class="auth-description">Sign in to keep your gift conversations together.</p>
+
+        <div class="auth-tabs" role="tablist" aria-label="Account options">
+          <button
+            type="button"
+            class="auth-tab is-active"
+            data-auth-mode="login"
+            role="tab"
+            aria-selected="true"
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            class="auth-tab"
+            data-auth-mode="register"
+            role="tab"
+            aria-selected="false"
+          >
+            Create account
+          </button>
+        </div>
+
+        <form id="login-form" class="auth-form">
+          <label for="login-username">Username</label>
+          <input
+            id="login-username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+          />
+          <label for="login-password">Password</label>
+          <input
+            id="login-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <button class="auth-submit" type="submit">Sign in</button>
+        </form>
+
+        <form id="register-form" class="auth-form hidden">
+          <label for="register-name">Name</label>
+          <input
+            id="register-name"
+            name="name"
+            type="text"
+            autocomplete="name"
+            required
+          />
+          <label for="register-username">Username</label>
+          <input
+            id="register-username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+          />
+          <label for="register-password">Password</label>
+          <input
+            id="register-password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
+          <button class="auth-submit" type="submit">Create account</button>
+        </form>
+
+        <button id="guest-button" class="auth-submit guest-submit" type="button">
+          Continue as guest
+        </button>
+        <p class="guest-note">Guest chats are temporary and won’t be saved.</p>
+
+        <p id="auth-feedback" class="status-message" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <div id="app-shell" class="app-container hidden">
+      <aside
+        id="history-sidebar"
+        class="sidebar"
+        aria-label="Conversation history"
+      >
+        <div class="sidebar-top">
+          <a class="brand" href="#" aria-label="Gift Genie home">
+            <img src="assets/genie.svg" alt="" class="genie-icon-img" />
+            <span>Gift Genie</span>
+          </a>
+          <button
+            type="button"
+            id="history-close"
+            class="sidebar-close"
+            aria-label="Close conversation history"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <button id="new-conversation" class="new-conversation" type="button">
+            <span aria-hidden="true">+</span>
+            New conversation
+          </button>
+          <p class="sidebar-heading">Your conversations</p>
+          <div id="conversation-list" class="conversation-list" aria-label="Your conversations">
+            <p class="history-placeholder">Loading conversations...</p>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <span class="status-indicator" aria-hidden="true"></span>
+          <div class="account-summary">
+            <span id="account-name">Signed in</span>
+            <button id="logout-button" class="logout-button" type="button">Sign out</button>
+          </div>
+        </div>
+      </aside>
+
+      <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
       <main class="main-content">
-        <form id="gift-form" class="gift-form">
-          <div class="input-section">
-            <div class="input-wrapper">
-              <textarea
-                id="user-input"
-                placeholder="e.g., My friend who loves hiphop music has a birthday coming up in 3 days. 40-60 bucks budget. I live in..."
-              ></textarea>
+        <header class="app-header">
+          <div class="mobile-brand">
+            <button
+              type="button"
+              id="history-toggle"
+              class="history-toggle"
+              aria-label="Open conversation history"
+              aria-controls="history-sidebar"
+              aria-expanded="false"
+            >
+              <span aria-hidden="true"></span>
+              <span aria-hidden="true"></span>
+              <span aria-hidden="true"></span>
+            </button>
+            <img src="assets/genie.svg" alt="" class="mobile-genie-icon" />
+            <span>Gift Genie</span>
+          </div>
+          <p id="chat-heading" class="header-caption">Your personal gift-finding assistant</p>
+        </header>
+
+        <section class="chat-panel" aria-label="Gift Genie chat">
+          <div id="empty-state" class="empty-state">
+            <div class="welcome-icon" aria-hidden="true">
+              <img src="assets/lamp.svg" alt="" />
+            </div>
+            <p class="eyebrow">A little magic for your next gift</p>
+            <h1>Who are we finding a gift for?</h1>
+            <p class="welcome-copy">
+              Tell me about them, the occasion, and your budget. I’ll help you
+              find something that feels just right.
+            </p>
+            <div class="suggestion-list" aria-label="Ideas to include">
+              <span>Who it’s for</span>
+              <span>The occasion</span>
+              <span>Your budget</span>
             </div>
           </div>
 
-          <div class="lamp-container">
-            <button
-              type="submit"
-              id="lamp-button"
-              class="lamp-btn"
-              aria-label="Rub the Lamp"
-            >
-              <span class="lamp-icon">
-                <img
-                  src="assets/lamp.svg"
-                  alt="Magic Lamp"
-                  class="lamp-icon-img"
-                />
-              </span>
-              <span class="lamp-text">Rub the Lamp</span>
-            </button>
-          </div>
-        </form>
-
-        <section class="output-section">
-          <div id="output-container" class="hidden">
-            <div id="output-content"></div>
-          </div>
+          <div
+            id="message-list"
+            class="message-list"
+            role="log"
+            aria-label="Conversation messages"
+            aria-live="polite"
+          ></div>
         </section>
+
+        <div class="composer-area">
+          <p id="chat-feedback" class="status-message" role="status" aria-live="polite"></p>
+          <form id="gift-form" class="gift-form">
+            <label class="sr-only" for="user-input">Describe the gift you need</label>
+            <textarea
+              id="user-input"
+              rows="1"
+              placeholder="Tell me who the gift is for..."
+              autocomplete="off"
+            ></textarea>
+            <div class="composer-footer">
+              <div class="composer-help">
+                <p>Include a budget or location for more tailored ideas.</p>
+                <p id="voice-status" class="voice-status" role="status" aria-live="polite"></p>
+              </div>
+              <div class="composer-actions">
+                <button
+                  type="button"
+                  id="voice-button"
+                  class="voice-btn"
+                  aria-label="Start voice recording"
+                  aria-pressed="false"
+                >
+                  Voice
+                </button>
+                <button
+                  type="submit"
+                  id="lamp-button"
+                  class="lamp-btn"
+                  aria-label="Rub the lamp for gift ideas"
+                >
+                  <span class="lamp-icon">
+                    <img
+                      src="assets/lamp.svg"
+                      alt=""
+                      class="lamp-icon-img"
+                    />
+                  </span>
+                  <span class="lamp-text">Find gift ideas</span>
+                </button>
+              </div>
+            </div>
+          </form>
+          <p class="disclaimer">
+            Gift ideas are a starting point. Check product details and prices before buying.
+          </p>
+        </div>
       </main>
     </div>
 
