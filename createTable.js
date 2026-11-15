@@ -2,7 +2,9 @@ import Database from "better-sqlite3";
 import path from "node:path";
 
 function createTable() {
- const db = new Database(path.join(process.cwd(), "database.db"));
+ const db = new Database(
+   process.env.DATABASE_PATH || path.join(process.cwd(), "database.db")
+ );
 db.pragma("foreign_keys = ON");
 
    db.exec(`
