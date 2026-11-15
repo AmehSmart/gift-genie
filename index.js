@@ -10,6 +10,7 @@ import {
 import { autoResizeTextarea, setLoading } from "./utils.js";
 
 const authView = document.getElementById("auth-view");
+const startupView = document.getElementById("startup-view");
 const appShell = document.getElementById("app-shell");
 const authTitle = document.getElementById("auth-title");
 const authDescription = document.querySelector(".auth-description");
@@ -49,6 +50,7 @@ let voiceReplyPending = false;
 let activeVoiceAudio = null;
 let activeVoiceObjectUrl = null;
 let stopActiveVoice = null;
+const NEW_CONVERSATION = "__new__";
 
 function start() {
   authTabs.forEach((tab) => {
@@ -106,8 +108,10 @@ async function initialize() {
     if (!data?.user) {
       throw new Error("The server returned an invalid sign-in response.");
     }
+    startupView.classList.add("hidden");
     await enterApp(data.user);
   } catch (error) {
+    startupView.classList.add("hidden");
     showAuthView();
     if (error instanceof ApiError && error.status === 401) {
       setFeedback(authFeedback, "");
@@ -118,6 +122,7 @@ async function initialize() {
 }
 
 function showAuthView() {
+  startupView.classList.add("hidden");
   authView.classList.remove("hidden");
   appShell.classList.add("hidden");
 }
@@ -129,6 +134,7 @@ async function enterApp(user) {
 
   isGuestMode = false;
   guestMessages = [];
+  startupView.classList.add("hidden");
   appShell.classList.remove("guest-mode");
   logoutButton.textContent = "Sign out";
   currentUser = user;
@@ -139,6 +145,7 @@ async function enterApp(user) {
 
   try {
     await loadConversations();
+    await restoreActiveConversation();
   } catch (error) {
     setFeedback(chatFeedback, `Could not load your conversations. ${error.message}`, "error");
   }
@@ -273,6 +280,44 @@ async function loadConversations() {
   renderConversationList();
 }
 
+function getActiveConversationStorageKey() {
+  return `gift-genie-active-conversation:${currentUser.id}`;
+}
+
+function rememberActiveConversation(conversationId) {
+  if (!currentUser) return;
+  localStorage.setItem(
+    getActiveConversationStorageKey(),
+    conversationId === null ? NEW_CONVERSATION : String(conversationId)
+  );
+}
+
+async function restoreActiveConversation() {
+  const savedId = localStorage.getItem(getActiveConversationStorageKey());
+  if (savedId === NEW_CONVERSATION) {
+    activeConversationId = null;
+    renderMessages([]);
+    chatHeading.textContent = "New conversation";
+    return;
+  }
+
+  const conversation =
+    conversations.find((item) => String(item.id) === savedId) ??
+    (savedId === null ? conversations[0] : null);
+
+  if (!conversation) {
+    if (savedId !== null) {
+      localStorage.removeItem(getActiveConversationStorageKey());
+    }
+    activeConversationId = null;
+    renderMessages([]);
+    chatHeading.textContent = "Your personal gift-finding assistant";
+    return;
+  }
+
+  await openConversation(conversation.id);
+}
+
 function renderConversationList() {
   conversationList.replaceChildren();
 
@@ -323,6 +368,7 @@ function upsertConversation(conversation) {
 function handleNewConversation() {
   setFeedback(chatFeedback, "");
   activeConversationId = null;
+  rememberActiveConversation(null);
   renderMessages([]);
   renderConversationList();
   chatHeading.textContent = "New conversation";
@@ -339,8 +385,12 @@ async function handleConversationSelection(event) {
   const button = event.target.closest("[data-conversation-id]");
   if (!button || !conversationList.contains(button)) return;
 
-  const conversationId = button.dataset.conversationId;
+  await openConversation(button.dataset.conversationId);
+}
+
+async function openConversation(conversationId) {
   activeConversationId = conversationId;
+  rememberActiveConversation(conversationId);
   renderConversationList();
   setHistorySidebarOpen(false);
   renderMessages([]);
@@ -388,6 +438,7 @@ async function handleConversationDelete(button) {
 
     if (String(activeConversationId) === conversationId) {
       activeConversationId = null;
+      rememberActiveConversation(null);
       renderMessages([]);
       chatHeading.textContent = "Your personal gift-finding assistant";
     }
@@ -716,6 +767,7 @@ async function handleGiftRequest(event) {
       }
 
       activeConversationId = conversation.id;
+      rememberActiveConversation(conversation.id);
       upsertConversation(conversation);
       chatHeading.textContent = conversation.title || "New conversation";
     }

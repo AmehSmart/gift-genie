@@ -35,6 +35,13 @@ body {
   line-height: 1.6;
 }
 
+.startup-screen {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  color: var(--text-secondary);
+}
+
 .auth-screen {
   display: grid;
   min-height: 100vh;
