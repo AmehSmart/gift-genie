@@ -9,6 +9,7 @@ import {authRouter} from './routes/auth.js'
 import { audioRouter } from './routes/audioMic.js'
 import { guestRouter } from './routes/guest.js'
 import {requireAuth} from './middleware/requireAuth.js'
+import { initializeDatabase } from "./db.js";
 dotenv.config();
 
 const appDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,7 @@ app.use('/api', requireAuth, conversationRouter)
 app.use(express.static(path.join(appDirectory, "dist")));
 
 const PORT = Number(process.env.PORT) || 3001;
+await initializeDatabase();
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });

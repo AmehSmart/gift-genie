@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import { SYSTEM_PROMPT } from "../systemPrompt.js";
+import { generateGiftReply } from "../aiService.js";
+
 
 dotenv.config();
 
@@ -40,20 +42,11 @@ export async function guestMessageController(req, res) {
   const safeHistory = history.map(({ role, content }) => ({ role, content }));
 
   try {
-    const response = await openai.responses.create({
-      model: process.env.AI_MODEL,
-      input: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...safeHistory,
-        { role: "user", content: cleanContent },
-      ],
-      tools: [{ type: "browser_search" }],
-    });
-    const assistantContent = response.output_text?.trim();
-
-    if (!assistantContent) {
-      throw new Error("The AI returned an empty response.");
-    }
+    const assistantContent = await generateGiftReply(openai, [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...safeHistory,
+      { role: "user", content: cleanContent },
+    ]);
 
     return res.json({
       userMessage: { role: "user", content: cleanContent },

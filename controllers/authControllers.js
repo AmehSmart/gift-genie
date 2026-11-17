@@ -25,14 +25,13 @@ export async function registerUser(req, res) {
 
   try {
     const passwordHash = await bcrypt.hash(password, 12);
-    const result = db
-      .prepare(
-        "INSERT INTO users (name, username, password_hash) VALUES (?, ?, ?)"
-      )
-      .run(cleanName, cleanUsername, passwordHash);
+    const result = await db.run(
+      "INSERT INTO users (name, username, password_hash) VALUES (?, ?, ?)",
+      [cleanName, cleanUsername, passwordHash]
+    );
 
     const user = {
-      id: result.lastInsertRowid,
+      id: Number(result.lastInsertRowid),
       name: cleanName,
       username: cleanUsername,
     };
@@ -62,17 +61,25 @@ export async function getMe(req, res){
     });
   }
 
-  const user = db
-    .prepare("SELECT id, name, username FROM users WHERE id = ?")
-    .get(req.session.userId);
+  try {
+    const user = await db.get(
+      "SELECT id, name, username FROM users WHERE id = ?",
+      [req.session.userId]
+    );
 
-  if (!user) {
-    return res.status(401).json({
-      error: { message: "You are not signed in." },
+    if (!user) {
+      return res.status(401).json({
+        error: { message: "You are not signed in." },
+      });
+    }
+
+    return res.json({ user });
+  } catch (error) {
+    console.error("Could not load the signed-in user:", error);
+    return res.status(500).json({
+      error: { message: "Could not check your sign-in status." },
     });
   }
-
-  return res.json({ user });
 }
 
 // ===== New loginUser function =====
@@ -87,11 +94,10 @@ export async function loginUser(req, res){
 
   try {
     const cleanUsername = username.trim().toLowerCase();
-    const user = db
-      .prepare(
-        "SELECT id, name, username, password_hash FROM users WHERE username = ?"
-      )
-      .get(cleanUsername);
+    const user = await db.get(
+      "SELECT id, name, username, password_hash FROM users WHERE username = ?",
+      [cleanUsername]
+    );
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({
