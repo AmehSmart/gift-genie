@@ -2,8 +2,10 @@ import { marked } from "marked";
 import DOMPurify from "dompurify";
 import {
   ApiError,
+  FriendlyError,
   authApi,
   conversationsApi,
+  getFriendlyErrorMessage,
   guestApi,
   voiceApi,
 } from "./api.js";
@@ -116,7 +118,7 @@ async function initialize() {
     if (error instanceof ApiError && error.status === 401) {
       setFeedback(authFeedback, "");
     } else {
-      setFeedback(authFeedback, `Could not check your sign-in status. ${error.message}`, "error");
+      setFeedback(authFeedback, getFriendlyErrorMessage(error, "login"), "error");
     }
   }
 }
@@ -147,7 +149,7 @@ async function enterApp(user) {
     await loadConversations();
     await restoreActiveConversation();
   } catch (error) {
-    setFeedback(chatFeedback, `Could not load your conversations. ${error.message}`, "error");
+    setFeedback(chatFeedback, getFriendlyErrorMessage(error, "history"), "error");
   }
 }
 
@@ -186,7 +188,7 @@ async function handleLogin(event) {
     });
     await enterApp(data?.user);
   } catch (error) {
-    setFeedback(authFeedback, error.message, "error");
+    setFeedback(authFeedback, getFriendlyErrorMessage(error, "login"), "error");
   } finally {
     setFormBusy(submitButton, false, "Sign in");
   }
@@ -209,7 +211,7 @@ async function handleRegister(event) {
     await enterApp(data?.user);
     registerForm.reset();
   } catch (error) {
-    setFeedback(authFeedback, error.message, "error");
+    setFeedback(authFeedback, getFriendlyErrorMessage(error, "register"), "error");
   } finally {
     setFormBusy(submitButton, false, "Create account");
   }
@@ -256,7 +258,7 @@ async function handleLogout() {
     setAuthMode("login");
   } catch (error) {
     setHistorySidebarOpen(false);
-    setFeedback(chatFeedback, `Could not sign out. ${error.message}`, "error");
+    setFeedback(chatFeedback, getFriendlyErrorMessage(error, "logout"), "error");
   } finally {
     logoutButton.disabled = false;
   }
@@ -408,7 +410,7 @@ async function openConversation(conversationId) {
     chatHeading.textContent = data.conversation.title || "Gift conversation";
     setFeedback(chatFeedback, "");
   } catch (error) {
-    setFeedback(chatFeedback, `Could not open this conversation. ${error.message}`, "error");
+    setFeedback(chatFeedback, getFriendlyErrorMessage(error, "conversation"), "error");
   }
 }
 
@@ -446,11 +448,7 @@ async function handleConversationDelete(button) {
     renderConversationList();
     setFeedback(chatFeedback, "Conversation deleted.");
   } catch (error) {
-    setFeedback(
-      chatFeedback,
-      `Could not delete this conversation. ${error.message}`,
-      "error"
-    );
+    setFeedback(chatFeedback, getFriendlyErrorMessage(error, "delete"), "error");
     button.disabled = false;
   }
 }
@@ -488,7 +486,7 @@ async function handleVoiceButtonClick() {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
     setFeedback(
       voiceStatus,
-      "Voice recording requires microphone access on HTTPS or localhost.",
+      "Voice recording isn't available in this browser. Try a different browser, and make sure the page is opened securely (HTTPS).",
       "error"
     );
     return;
@@ -554,7 +552,7 @@ async function handleVoiceButtonClick() {
     newConversationButton.disabled = false;
     logoutButton.disabled = false;
     voiceButton.disabled = false;
-    setFeedback(voiceStatus, `Could not start recording. ${error.message}`, "error");
+    setFeedback(voiceStatus, getFriendlyErrorMessage(error, "voice"), "error");
   }
 }
 
@@ -577,14 +575,14 @@ async function finishVoiceRecording(recorder) {
       type: recorder.mimeType || "audio/webm",
     });
     if (recording.size === 0) {
-      throw new Error("The recording was empty.");
+      throw new FriendlyError("We didn't catch any audio. Please try again.");
     }
 
     setFeedback(voiceStatus, "Transcribing your recording...");
     const data = await voiceApi.transcribe(recording);
     const transcript = data?.text?.trim();
     if (!transcript) {
-      throw new Error("The server did not return a transcript.");
+      throw new FriendlyError("We couldn't make out what you said. Please try again.");
     }
 
     userInput.value = userInput.value.trim()
@@ -595,7 +593,7 @@ async function finishVoiceRecording(recorder) {
     setFeedback(voiceStatus, "Sending your voice message...");
     shouldSubmitTranscript = true;
   } catch (error) {
-    setFeedback(voiceStatus, `Could not transcribe audio. ${error.message}`, "error");
+    setFeedback(voiceStatus, getFriendlyErrorMessage(error, "voice"), "error");
   } finally {
     userInput.disabled = false;
     giftForm.querySelector('button[type="submit"]').disabled = false;
@@ -687,7 +685,7 @@ function attachVoiceReply(audioChunks) {
       button.setAttribute("aria-label", "Play spoken reply");
       setFeedback(
         voiceStatus,
-        `Audio is ready, but playback did not start. ${error.message}`,
+        "Your voice reply is ready, but it couldn't start playing. Tap the play button to listen.",
         "error"
       );
     }
@@ -701,7 +699,7 @@ function attachVoiceReply(audioChunks) {
     playbackState = "idle";
     button.textContent = "Play voice reply";
     button.setAttribute("aria-label", "Play spoken reply");
-    setFeedback(voiceStatus, "The spoken reply could not be played.", "error");
+    setFeedback(voiceStatus, "We couldn't play the voice reply. Please try again.", "error");
   });
 
   button.addEventListener("click", async () => {
@@ -724,7 +722,7 @@ function attachVoiceReply(audioChunks) {
         playbackState = "paused";
         button.textContent = "Resume voice reply";
         button.setAttribute("aria-label", "Resume spoken reply");
-        setFeedback(voiceStatus, `Could not resume audio. ${error.message}`, "error");
+        setFeedback(voiceStatus, "We couldn't resume the voice reply. Please try again.", "error");
       }
       return;
     }
@@ -744,6 +742,11 @@ async function handleGiftRequest(event) {
   const content = userInput.value.trim();
   const isGuestRequest = isGuestMode;
   if (!content || (!currentUser && !isGuestRequest)) return;
+
+  // Clear immediately
+  userInput.value = "";
+  autoResizeTextarea(userInput);
+
 
   const shouldSpeakReply = voiceReplyPending;
   setFeedback(chatFeedback, "");
@@ -791,14 +794,18 @@ async function handleGiftRequest(event) {
 
     thinkingIndicator.remove();
     appendMessage({ role: "assistant", content: data.assistantMessage.content });
-    userInput.value = "";
-    autoResizeTextarea(userInput);
+    // userInput.value = "";
+    // autoResizeTextarea(userInput);
 
     if (!isGuestRequest) {
       try {
         await loadConversations();
       } catch (error) {
-        setFeedback(chatFeedback, `Your reply arrived, but history could not be refreshed. ${error.message}`, "error");
+        setFeedback(
+          chatFeedback,
+          "Your reply arrived, but we couldn't refresh your conversation history. Please reload the page.",
+          "error"
+        );
       }
     }
 
@@ -811,7 +818,7 @@ async function handleGiftRequest(event) {
       } catch (error) {
         setFeedback(
           voiceStatus,
-          `Your reply arrived, but voice playback failed. ${error.message}`,
+          "Your reply arrived, but we couldn't prepare the voice version.",
           "error"
         );
       }
@@ -820,7 +827,7 @@ async function handleGiftRequest(event) {
     thinkingIndicator?.remove();
     pendingUserRow?.remove();
     mainContent.classList.toggle("has-messages", messageList.childElementCount > 0);
-    setFeedback(chatFeedback, `Could not send your message. ${error.message}`, "error");
+    setFeedback(chatFeedback, getFriendlyErrorMessage(error, "chat"), "error");
   } finally {
     setLoading(false);
     voiceButton.disabled = false;
@@ -841,7 +848,7 @@ function renderMessages(messages) {
   }
 
   clearActiveVoiceAudio();
-  messageList.replaceChildren();
+  messageList.replaceChildren(); 
   messages.forEach(appendMessage);
   mainContent.classList.toggle("has-messages", messages.length > 0);
   scrollToLatestMessage();

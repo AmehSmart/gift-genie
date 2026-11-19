@@ -39,12 +39,16 @@ export async function registerUser(req, res) {
     req.session.userId = user.id;
     return res.status(201).json({ user });
   } catch (error) {
-    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
-      return res.status(409).json({
-        error: { message: "That username is already registered." },
-      });
-    }
-
+    if (
+  error.code === "SQLITE_CONSTRAINT" ||
+        error.message?.includes("UNIQUE constraint failed")
+      ) {
+        return res.status(409).json({
+          error: {
+            message: "That username is already registered.",
+          },
+        });
+      }
     console.error("Registration failed:", error);
     return res.status(500).json({
       error: { message: "Registration failed. Please try again." },
